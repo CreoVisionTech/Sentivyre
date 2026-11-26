@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vyrelock Business Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@600;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: calm control room for a business owner
+   IDEA: a wall of PC status tiles, each lit by its safety
+   PICTURE: the fleet grid itself, with a glowing summary strip
+   COLOUR and TYPE: Vyrelock black, graphite, shield red; Sora + Plus Jakarta Sans
+   LAYOUT: header, summary strip, PC grid */
+:root{--bg:#0B0B0D;--card:#141417;--card2:#1B1B1F;--line:#26262B;--text:#F2F2F3;--mute:#B8B8BF;--dim:#8C8C94;--acc:#FF4A1C;--btn:#D93216;--soft:#FF7E57;--ok:#6FD08C;--warn:#FFB14A}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.55 'Plus Jakarta Sans',system-ui,sans-serif;overflow-x:clip}
+body::before{content:"";position:fixed;z-index:-1;width:760px;height:760px;right:-240px;top:-340px;border-radius:50%;background:radial-gradient(circle,rgba(255,74,28,.25),rgba(255,74,28,0) 70%);pointer-events:none}
+h1,h2,h3,.h{font-family:'Sora',sans-serif;margin:0}
+header{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;padding:24px max(5vw,16px);border-bottom:1px solid #1F1F23}
+.brand{display:flex;align-items:center;gap:12px}.brand b{font-family:'Sora';font-size:20px;letter-spacing:2px}.brand b span{color:var(--acc)}
+.brand svg{filter:drop-shadow(0 0 10px rgba(255,74,28,.6))}
+main{padding:32px max(5vw,16px) 64px;max-width:1320px;margin:0 auto}
+.card{background:rgba(20,20,23,.9);border:1px solid var(--line);border-radius:18px;padding:22px}
+.btn{border:0;border-radius:12px;padding:12px 20px;min-height:44px;font:inherit;font-weight:700;cursor:pointer;background:var(--btn);color:#fff;box-shadow:0 0 22px rgba(255,74,28,.3)}
+.btn.ghost{background:transparent;border:1px solid #3A3A40;box-shadow:none}
+input{width:100%;font:inherit;font-size:16px;color:inherit;background:#0F0F12;border:1px solid #303036;border-radius:12px;padding:12px 14px}
+input:focus{outline:none;border-color:var(--acc)}
+label{display:block;font-weight:600;margin:14px 0 8px}
+.sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin:24px 0}
+.sum .v{font-family:'Sora';font-size:clamp(30px,4vw,40px);font-weight:700;margin-top:6px;text-shadow:0 0 24px rgba(255,74,28,.3)}
+.k{font-size:13px;color:var(--dim)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:16px}
+.pc{position:relative;overflow:hidden}
+.pc::before{content:"";position:absolute;inset:0 0 auto 0;height:3px;background:var(--c,var(--ok));box-shadow:0 0 18px var(--c,var(--ok))}
+.pc .top{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.pill{font-size:11px;font-weight:700;padding:4px 10px;border-radius:99px;color:#0B0B0D;white-space:nowrap}
+.score{font-family:'Sora';font-size:44px;font-weight:700;line-height:1;margin:16px 0 4px}
+.rows{display:grid;grid-template-columns:1fr auto;gap:6px 12px;font-size:14px;margin-top:14px;color:var(--mute)}
+.rows span:nth-child(even){color:var(--text);text-align:right}
+.dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
+.note{color:var(--dim);font-size:14px}
+.hidden{display:none!important}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+@media(max-width:600px){header{padding:18px 16px}.score{font-size:36px}}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><svg width="40" height="40" viewBox="0 0 100 100" aria-hidden="true"><path d="M50 6 L86 19 V48 C86 72 70 88 50 95 C30 88 14 72 14 48 V19 Z" fill="none" stroke="#FF4A1C" stroke-width="7" stroke-linejoin="round"/><circle cx="50" cy="27" r="5" fill="#FF4A1C"/><path d="M33 38 L50 70 L67 38" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/></svg><div><b>VYRE<span>LOCK</span></b><div class="note" style="margin:0">Business Dashboard</div></div></div>
+  <div class="row"><span class="note" id="updated"></span><button class="btn ghost hidden" id="refresh">Refresh</button><button class="btn ghost hidden" id="change">Change team</button></div>
+</header>
+<main>
+  <section id="setup" class="card" style="max-width:560px;margin:40px auto">
+    <h1 style="font-size:30px">Your company's PCs, on one page</h1>
+    <p class="note" style="font-size:16px">Enter the same details you put in Sentivyre → Settings → Business dashboard.</p>
+    <form id="form">
+      <label for="team">Team code</label><input id="team" placeholder="e.g. creovision-office" required>
+      <label for="pid">Firebase project ID</label><input id="pid" placeholder="creovision-tech" required>
+      <label for="key">Firebase Web API key</label><input id="key" placeholder="AIza..." required>
+      <div class="row" style="margin-top:20px"><button class="btn">Open dashboard</button><button type="button" class="btn ghost" id="demo">View demo</button></div>
+      <p class="note" id="err" style="color:var(--soft)"></p>
+    </form>
+  </section>
+  <section id="dash" class="hidden">
+    <h1 id="teamName" style="font-size:clamp(28px,4vw,44px);line-height:1.05"></h1>
+    <p class="note" id="demoNote" style="margin:6px 0 0"></p>
+    <div class="sum">
+      <div class="card"><div class="k">PCs</div><div class="v" id="sPcs">0</div><div class="note" id="sOnline"></div></div>
+      <div class="card"><div class="k">Average safety score</div><div class="v" id="sAvg">–</div></div>
+      <div class="card"><div class="k">PCs that need attention</div><div class="v" id="sRisk" style="color:var(--acc)">0</div></div>
+      <div class="card"><div class="k">Threats caught (all PCs)</div><div class="v" id="sThreats">0</div></div>
+    </div>
+    <div class="grid" id="grid"></div>
+  </section>
+</main>
+<script>
+{
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let cfg=null,timer=null,demo=false;
+try{cfg=JSON.parse(localStorage.getItem('vyrelock_dash')||'null');}catch(e){}
+const val=f=>f==null?null:('stringValue'in f)?f.stringValue:('integerValue'in f)?Number(f.integerValue):('doubleValue'in f)?f.doubleValue:('booleanValue'in f)?f.booleanValue:('timestampValue'in f)?f.timestampValue:null;
+function ago(iso){if(!iso)return 'never';const s=(Date.now()-new Date(iso))/1000;if(s<60)return 'just now';if(s<3600)return Math.round(s/60)+' min ago';if(s<86400)return Math.round(s/3600)+' h ago';return Math.round(s/86400)+' days ago';}
+async function load(){
+  let pcs=[];
+  if(demo){
+    const now=Date.now(),iso=m=>new Date(now-m*60000).toISOString();
+    pcs=[{name:'Reception PC',score:100,threats:0,recentThreats:0,shield:true,lastSeen:iso(3),lastScan:iso(90),lastScanResult:'Quick scan: no threats',version:'1.4.0'},
+         {name:'Accounts laptop',score:76,threats:3,recentThreats:2,shield:true,lastSeen:iso(8),lastScan:iso(20),lastScanResult:'Quick scan: threats found',version:'1.4.0'},
+         {name:'Manager PC',score:94,threats:1,recentThreats:0,shield:false,lastSeen:iso(240),lastScan:iso(1500),lastScanResult:'Full scan: no threats',version:'1.3.0'},
+         {name:'Design studio',score:100,threats:0,recentThreats:0,shield:true,lastSeen:iso(1),lastScan:iso(300),lastScanResult:'Quick scan: no threats',version:'1.4.0'}];
+  }else{
+    const team=cfg.team.trim().toLowerCase().replace(/[^a-z0-9-]/g,'-');
+    const url='https://firestore.googleapis.com/v1/projects/'+encodeURIComponent(cfg.pid)+'/databases/(default)/documents/teams/'+encodeURIComponent(team)+'/devices?pageSize=300&key='+encodeURIComponent(cfg.key);
+    const r=await fetch(url);const j=await r.json();
+    if(!r.ok)throw new Error((j.error&&j.error.message)||('HTTP '+r.status));
+    pcs=(j.documents||[]).map(d=>{const o={};for(const[k,f]of Object.entries(d.fields||{}))o[k]=val(f);return o;});
+  }
+  render(pcs);
+}
+function render(pcs){
+  $('setup').classList.add('hidden');$('dash').classList.remove('hidden');$('refresh').classList.remove('hidden');$('change').classList.remove('hidden');
+  $('teamName').textContent=demo?'Demo Company':cfg.team;
+  $('demoNote').textContent=demo?'Sample data, to show how the dashboard looks.':'Updates every minute. PCs report every 10 minutes and after each scan.';
+  const online=pcs.filter(p=>p.lastSeen&&Date.now()-new Date(p.lastSeen)<20*60000).length;
+  const risk=pcs.filter(p=>(p.score||100)<85||p.recentThreats>0||p.shield===false).length;
+  $('sPcs').textContent=pcs.length;$('sOnline').textContent=online+' online now';
+  $('sAvg').textContent=pcs.length?Math.round(pcs.reduce((a,p)=>a+(p.score||0),0)/pcs.length)+'%':'–';
+  $('sRisk').textContent=risk;$('sThreats').textContent=pcs.reduce((a,p)=>a+(p.threats||0),0);
+  pcs.sort((a,b)=>(a.score||0)-(b.score||0));
+  $('grid').innerHTML=pcs.length?pcs.map(p=>{
+    const on=p.lastSeen&&Date.now()-new Date(p.lastSeen)<20*60000;
+    const sc=p.score||0;const c=sc>=85&&!p.recentThreats?'var(--ok)':sc>=65?'var(--warn)':'var(--acc)';
+    const label=sc>=85&&!p.recentThreats?'PROTECTED':sc>=65?'BE CAREFUL':'AT RISK';
+    return '<div class="card pc" style="--c:'+c+'"><div class="top"><div><h3 style="font-size:19px">'+esc(p.name)+'</h3><div class="note"><span class="dot" style="background:'+(on?'var(--ok)':'#55555c')+'"></span>'+(on?'Online':'Last seen '+esc(ago(p.lastSeen)))+'</div></div><span class="pill" style="background:'+c+'">'+label+'</span></div>'+
+      '<div class="score" style="color:'+c+'">'+sc+'%</div><div class="note">Safety score</div>'+
+      '<div class="rows"><span>Last scan</span><span>'+esc(p.lastScan?ago(p.lastScan):'never')+'</span><span>Result</span><span>'+esc(p.lastScanResult||'–')+'</span><span>Threats caught</span><span>'+esc(p.threats||0)+'</span><span>Download Shield</span><span style="color:'+(p.shield===false?'var(--acc)':'var(--ok)')+'">'+(p.shield===false?'Off':'On')+'</span><span>Sentivyre version</span><span>'+esc(p.version||'–')+'</span></div></div>';
+  }).join(''):'<div class="card"><h3>No PCs yet</h3><p class="note">Turn on Settings → Business dashboard in Sentivyre on each PC, with this team code.</p></div>';
+  $('updated').textContent='Updated '+new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+}
+async function start(){$('err').textContent='';try{await load();clearInterval(timer);timer=setInterval(()=>load().catch(()=>{}),60000);}catch(e){$('setup').classList.remove('hidden');$('dash').classList.add('hidden');$('err').textContent='Could not open the dashboard: '+e.message;}}
+$('form').addEventListener('submit',e=>{e.preventDefault();demo=false;cfg={team:$('team').value.trim(),pid:$('pid').value.trim(),key:$('key').value.trim()};try{localStorage.setItem('vyrelock_dash',JSON.stringify(cfg));}catch(e){}start();});
+$('demo').onclick=()=>{demo=true;start();};
+$('refresh').onclick=()=>load().catch(e=>$('updated').textContent='Refresh failed');
+$('change').onclick=()=>{clearInterval(timer);demo=false;$('dash').classList.add('hidden');$('setup').classList.remove('hidden');$('refresh').classList.add('hidden');$('change').classList.add('hidden');};
+if(cfg){$('team').value=cfg.team;$('pid').value=cfg.pid;$('key').value=cfg.key;start();}
+}
+</script>
+</body>
+</html>

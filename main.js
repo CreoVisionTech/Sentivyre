@@ -3,6 +3,9 @@ const { app, BrowserWindow, ipcMain, shell, Menu, Notification, Tray, nativeImag
 const path = require('path');
 const fs = require('fs');
 const scanner = require('./scanner');
+const network = require('./network');
+const os = require('os');
+const crypto = require('crypto');
 const { autoUpdater } = require('electron-updater');
 
 let win = null;
@@ -14,7 +17,7 @@ let watcher = null;
 
 /* ---------- Settings kept by the app itself ---------- */
 const settingsFile = () => path.join(app.getPath('userData'), 'settings.json');
-let settings = { downloadShield: true, background: true, autostart: false };
+let settings = { downloadShield: true, background: true, autostart: false, schedule: { freq: 'off', time: '20:00', day: 5, last: 0 }, business: { enabled: false, projectId: '', apiKey: '', team: '', deviceName: '' }, deviceId: '' };
 function loadSettings() { try { settings = { ...settings, ...JSON.parse(fs.readFileSync(settingsFile(), 'utf8')) }; } catch (e) { /* defaults */ } }
 function saveSettings() { try { fs.writeFileSync(settingsFile(), JSON.stringify(settings)); } catch (e) { /* ignore */ } }
 const qdir = () => path.join(app.getPath('userData'), 'quarantine');
@@ -90,7 +93,7 @@ function createTray() {
 
 /* ---------- PC scan ---------- */
 const paths = { downloads: () => app.getPath('downloads'), desktop: () => app.getPath('desktop'), documents: () => app.getPath('documents') };
-ipcMain.handle('scan-start', (_e, kind) => {
+function startScan(kind) {
   if (currentScan) return false;
   currentScan = scanner.createScan(kind === 'full' ? 'full' : 'quick', paths, (st) => {
     send('scan-status', st);
@@ -101,7 +104,70 @@ ipcMain.handle('scan-start', (_e, kind) => {
   });
   currentScan.run().catch((err) => send('scan-status', { state: 'error', message: String(err.message || err) })).finally(() => { currentScan = null; });
   return true;
+}
+ipcMain.handle('scan-start', (_e, kind) => startScan(kind));
+
+/* ---------- Scheduled scans ---------- */
+function scheduleDue(now = new Date()) {
+  const sc = settings.schedule || {};
+  if (!sc.freq || sc.freq === 'off') return false;
+  const [h, m] = String(sc.time || '20:00').split(':').map(Number);
+  const at = new Date(now); at.setHours(h || 0, m || 0, 0, 0);
+  if (now < at || (sc.last || 0) >= at.getTime()) return false;
+  if (sc.freq === 'weekly' && now.getDay() !== Number(sc.day)) return false;
+  return true;
+}
+function nextScheduled(now = new Date()) {
+  const sc = settings.schedule || {};
+  if (!sc.freq || sc.freq === 'off') return null;
+  const [h, m] = String(sc.time || '20:00').split(':').map(Number);
+  for (let i = 0; i < 8; i++) {
+    const d = new Date(now); d.setDate(d.getDate() + i); d.setHours(h || 0, m || 0, 0, 0);
+    if (sc.freq === 'weekly' && d.getDay() !== Number(sc.day)) continue;
+    if (d > now || (sc.last || 0) < d.getTime()) return d.getTime();
+  }
+  return null;
+}
+setInterval(() => {
+  if (scheduleDue() && !currentScan) {
+    settings.schedule.last = Date.now(); saveSettings();
+    send('scheduled-scan', true);
+    startScan('quick');
+  }
+}, 60 * 1000);
+ipcMain.handle('schedule-set', (_e, sc) => {
+  settings.schedule = { ...settings.schedule, freq: sc.freq, time: sc.time, day: Number(sc.day) }; saveSettings();
+  return nextScheduled();
 });
+ipcMain.handle('schedule-next', () => nextScheduled());
+
+/* ---------- Network checker ---------- */
+ipcMain.handle('wifi-info', () => network.getWifi());
+ipcMain.handle('network-devices', (_e, deep) => network.getDevices(!!deep, (p) => send('network-progress', p)));
+
+/* ---------- Business dashboard (Firebase Firestore) ---------- */
+function fsValue(v) {
+  if (typeof v === 'boolean') return { booleanValue: v };
+  if (typeof v === 'number' && Number.isInteger(v)) return { integerValue: String(v) };
+  if (typeof v === 'number') return { doubleValue: v };
+  if (v instanceof Date) return { timestampValue: v.toISOString() };
+  return { stringValue: String(v == null ? '' : v) };
+}
+async function businessReport(data, cfgOverride) {
+  const b = { ...settings.business, ...(cfgOverride || {}) };
+  if (!b.projectId || !b.apiKey || !b.team) throw new Error('Fill in project ID, Web API key and team code first');
+  if (!settings.deviceId) { settings.deviceId = crypto.randomUUID(); saveSettings(); }
+  const team = encodeURIComponent(b.team.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-'));
+  const doc = { ...data, name: b.deviceName || os.hostname(), hostname: os.hostname(), version: app.getVersion(), lastSeen: new Date() };
+  const fields = {}; for (const [k, v] of Object.entries(doc)) fields[k] = fsValue(v);
+  const url = `https://firestore.googleapis.com/v1/projects/${encodeURIComponent(b.projectId.trim())}/databases/(default)/documents/teams/${team}/devices/${settings.deviceId}?key=${encodeURIComponent(b.apiKey.trim())}`;
+  const res = await fetch(url, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ fields }) });
+  if (!res.ok) { let m = 'HTTP ' + res.status; try { const j = await res.json(); m = (j.error && j.error.message) || m; } catch (e) { /* keep */ } throw new Error(m); }
+  return true;
+}
+ipcMain.handle('business-set', (_e, b) => { settings.business = { ...settings.business, ...b }; saveSettings(); return settings.business; });
+ipcMain.handle('business-report', (_e, data) => businessReport(data));
+ipcMain.handle('business-test', (_e, b, data) => businessReport(data, b));
 ipcMain.handle('scan-cancel', () => { if (currentScan) currentScan.cancel(); return true; });
 ipcMain.handle('defender-available', () => !!scanner.defenderPath());
 
@@ -129,7 +195,7 @@ ipcMain.handle('show-file', (_e, file) => { shell.showItemInFolder(file); return
 ipcMain.handle('open-defender', () => shell.openExternal('windowsdefender://threat/'));
 
 /* ---------- Background & start-up ---------- */
-ipcMain.handle('get-settings', () => ({ ...settings, downloads: app.getPath('downloads') }));
+ipcMain.handle('get-settings', () => ({ ...settings, downloads: app.getPath('downloads'), hostname: os.hostname() }));
 ipcMain.handle('set-background', (_e, on) => { settings.background = !!on; saveSettings(); return settings.background; });
 ipcMain.handle('set-autostart', (_e, on) => {
   settings.autostart = !!on; saveSettings();

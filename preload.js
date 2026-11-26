@@ -24,5 +24,14 @@ contextBridge.exposeInMainWorld('sentivyre', {
   openDefender: () => ipcRenderer.invoke('open-defender'),
   getSettings: () => ipcRenderer.invoke('get-settings'),
   setBackground: (on) => ipcRenderer.invoke('set-background', on),
-  setAutostart: (on) => ipcRenderer.invoke('set-autostart', on)
+  setAutostart: (on) => ipcRenderer.invoke('set-autostart', on),
+  setSchedule: (sc) => ipcRenderer.invoke('schedule-set', sc),
+  nextSchedule: () => ipcRenderer.invoke('schedule-next'),
+  onScheduledScan: (fn) => ipcRenderer.on('scheduled-scan', () => fn()),
+  wifiInfo: () => ipcRenderer.invoke('wifi-info'),
+  networkDevices: (deep) => ipcRenderer.invoke('network-devices', deep),
+  onNetworkProgress: (fn) => ipcRenderer.on('network-progress', (_e, p) => fn(p)),
+  businessSet: (b) => ipcRenderer.invoke('business-set', b),
+  businessReport: (data) => ipcRenderer.invoke('business-report', data),
+  businessTest: (b, data) => ipcRenderer.invoke('business-test', b, data)
 });

@@ -22,6 +22,11 @@ It is made by **Vyrelock Technologies**, a startup founded by **Hasan Bhatti** i
 | 🖥️ **PC Scan** | Quick and full scans for dangerous files (fake file types, risky programs, start-up scripts), with Microsoft Defender as a second opinion |
 | ⬇️ **Download Shield** | Checks every new file in your Downloads folder the moment it arrives, and warns you if it's dangerous |
 | 🔒 **Quarantine** | Moves dangerous files somewhere they can't run, with Restore and Delete forever |
+| 📶 **Network** | Checks if your Wi-Fi is safe (open, WEP, outdated security) and lists every device on your network so you can spot strangers |
+| ⏰ **Scheduled scans** | Runs a quick scan by itself every day or week at the time you choose |
+| 🤖 **Ask Vyra** | Explains in simple words what a flagged file is and what to do about it |
+| 🌍 **Arabic** | The whole app in Arabic, right-to-left |
+| 🏢 **Business dashboard** | Every company PC reports its safety status to one web page |
 | ✉️ **Scam Scanner** | Paste an SMS, email or WhatsApp message to find out if it's a scam (AI or offline rules) |
 | 🔗 **Link Checker** | Spots fake and phishing links: look-alike brands, unsafe domains, shortened links, IP addresses |
 | 🔑 **Password Guardian** | Shows password strength and time to crack, and makes strong passwords. Nothing leaves your PC. |
@@ -60,6 +65,27 @@ Vyra and the AI scam scan use Claude. To turn them on:
 
 Without a key, the Scam Scanner and Link Checker still work offline with built-in rules. The key is stored only on your PC.
 
+## Business dashboard setup
+
+The dashboard lets a company see every PC running Sentivyre on one page. It uses a free Firebase Firestore database.
+
+1. In the [Firebase console](https://console.firebase.google.com), open your project, then go to **Build → Firestore Database → Create database**.
+2. Open the **Rules** tab, paste these rules and click **Publish**:
+   ```
+   rules_version = '2';
+   service cloud.firestore {
+     match /databases/{database}/documents {
+       match /teams/{team}/devices/{device} {
+         allow read, write: if true;
+       }
+     }
+   }
+   ```
+   > These rules are simple for a first version. Anyone who knows your project ID and team code can see the PCs, so pick a team code that's hard to guess.
+3. Go to **Project settings → General** and copy the **Project ID** and **Web API key**.
+4. On each PC, open **Sentivyre → Settings → Business dashboard**, fill in the PC name, team code, project ID and API key, then click **Save & test**.
+5. Deploy the `dashboard` folder to Netlify (drag the folder onto app.netlify.com/drop). Open it and enter the same team code, project ID and key. Use **View demo** to see sample data.
+
 ---
 
 ## For developers
@@ -71,8 +97,12 @@ sentivyre/
 ├── main.js                  # App window, auto-updater, AI requests
 ├── preload.js               # Safe bridge between the window and the app
 ├── scanner.js               # PC Scan, Download Shield and quarantine
+├── network.js               # Wi-Fi safety and network devices
+├── dashboard/
+│   └── index.html           # Business dashboard web page (deploy to Netlify)
 ├── src/
 │   ├── index.html           # The whole app interface
+│   ├── i18n.js              # English and Arabic
 │   └── icon.png
 ├── build/
 │   ├── icon.ico             # App and installer icon
