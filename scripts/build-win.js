@@ -16,6 +16,9 @@ const run = (cmd) => execSync(cmd, { cwd: root, stdio: 'inherit' });
 fs.rmSync(dist, { recursive: true, force: true });
 run('npx electron-builder --win dir --x64 --publish never');
 
+// 1b. Update settings the app reads to find new versions on GitHub
+fs.writeFileSync(path.join(dist, 'win-unpacked', 'resources', 'app-update.yml'), 'owner: CreoVisionTech\nrepo: sentivyre\nprovider: github\nreleaseType: release\nupdaterCacheDirName: sentivyre-updater\n');
+
 // 2. Put the Sentivyre icon and version details on the .exe
 setExeInfo(path.join(dist, 'win-unpacked', 'Sentivyre.exe'), version);
 

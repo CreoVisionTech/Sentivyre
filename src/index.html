@@ -488,8 +488,8 @@ $('unlockForm').addEventListener('submit',async e=>{e.preventDefault();if(await 
 
 // updates (real, via GitHub Releases)
 const S=window.sentivyre||null;
-const APP_VERSION='1.1.0';
-const CHANGELOG=[['1.1.0','Windows app with installer and automatic updates from GitHub. Settings tab: account login, app lock with PIN, notifications and AI connection.'],['1.0.0','First release: Scam Scanner, Link Checker, Password Guardian, Vyra AI Assistant and Panic Button.']];
+const APP_VERSION='1.2.0';
+const CHANGELOG=[['1.2.0','Fixed automatic updates from GitHub. Update errors now show what went wrong.'],['1.1.0','Windows app with installer and automatic updates from GitHub. Settings tab: account login, app lock with PIN, notifications and AI connection.'],['1.0.0','First release: Scam Scanner, Link Checker, Password Guardian, Vyra AI Assistant and Panic Button.']];
 let upd=store.get('upd',{auto:true,showNew:true,last:null,seen:null});
 $('autoUpd').checked=upd.auto;$('showNew').checked=upd.showNew;
 function setVer(v){$('verPill').textContent='v'+v;}
@@ -510,7 +510,7 @@ function updUI(st){
   if(st.state==='downloading'){m.textContent='Downloading update… '+st.percent+'%';$('updBar').style.width=st.percent+'%';}
   if(st.state==='latest'){upd.last=Date.now();store.set('upd',upd);m.textContent='Up to date · checked '+ago(upd.last);}
   if(st.state==='ready'){m.textContent='Version '+st.version+' is ready.';toast('✓ Update ready','Restart Sentivyre to install version '+st.version+'.',false);}
-  if(st.state==='error')m.textContent='Could not check for updates. Check your internet connection.';
+  if(st.state==='error'){const msg=String(st.message||'');m.textContent=/ENOTFOUND|ECONN|ETIMEDOUT|network|ERR_INTERNET/i.test(msg)?'Could not reach GitHub. Check your internet connection.':'Update check failed: '+msg.split('\n')[0].slice(0,140);}
   if(st.state==='dev')m.textContent='Updates work in the installed app only.';
 }
 if(S)S.onUpdateStatus(updUI);

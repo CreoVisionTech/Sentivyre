@@ -48,6 +48,8 @@ function createWindow() {
 }
 
 /* ---------- Auto update (GitHub Releases) ---------- */
+// Where to look for updates: GitHub Releases of CreoVisionTech/sentivyre
+autoUpdater.setFeedURL({ provider: 'github', owner: 'CreoVisionTech', repo: 'sentivyre', releaseType: 'release' });
 autoUpdater.autoDownload = true;
 autoUpdater.autoInstallOnAppQuit = true;
 
