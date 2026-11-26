@@ -1,0 +1,62 @@
+{
+  "name": "sentivyre",
+  "productName": "Sentivyre",
+  "version": "1.1.0",
+  "description": "Sentivyre by Vyrelock - AI cybersecurity for your PC",
+  "author": "Vyrelock Technologies <creovisiontech4@gmail.com>",
+  "license": "UNLICENSED",
+  "main": "main.js",
+  "homepage": "https://github.com/CreoVisionTech/sentivyre",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CreoVisionTech/sentivyre.git"
+  },
+  "scripts": {
+    "start": "electron .",
+    "dist": "node scripts/build-win.js"
+  },
+  "dependencies": {
+    "electron-updater": "6.8.11"
+  },
+  "devDependencies": {
+    "electron": "38.8.4",
+    "electron-builder": "26.0.19",
+    "pe-library": "^2.0.3",
+    "resedit": "^2.0.3"
+  },
+  "build": {
+    "appId": "com.vyrelock.sentivyre",
+    "productName": "Sentivyre",
+    "copyright": "\u00a9 2026 Vyrelock Technologies",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "dir",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "signAndEditExecutable": false
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "CreoVisionTech",
+        "repo": "sentivyre",
+        "releaseType": "release"
+      }
+    ]
+  }
+}
