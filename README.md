@@ -32,7 +32,7 @@ It is made by **Vyrelock Technologies**, a startup founded by **Hasan Bhatti** i
 | 🔑 **Password Guardian** | Shows password strength and time to crack, and makes strong passwords. Nothing leaves your PC. |
 | 🤖 **Vyra AI Assistant** | An AI chat for security questions in English or Arabic |
 | ⚠️ **Panic Button** | A step-by-step checklist to follow if you've been hacked |
-| ⚙️ **Settings** | Account login, app lock with PIN, notifications, AI connection, automatic updates, start with Windows and protection from the system tray |
+| ⚙️ **Settings** | Account login, app lock with PIN, notifications, AI connection (any provider), automatic updates, start with Windows and protection from the system tray |
 
 ## Download & install
 
@@ -58,33 +58,20 @@ You can turn automatic updates on or off in **Settings → Updates**.
 
 ## AI features (optional)
 
-Vyra and the AI scam scan use Claude. To turn them on:
+Vyra, the AI scam scan and "Ask Vyra" work with **any AI service**:
 
-1. Get an API key from [console.anthropic.com](https://console.anthropic.com).
-2. In Sentivyre, open **Settings → AI connection** and paste the key.
+| Service | Key starts with |
+|---|---|
+| Anthropic Claude | `sk-ant-` |
+| OpenAI ChatGPT | `sk-` |
+| Google Gemini | `AIza` |
+| Groq | `gsk_` |
+| OpenRouter | `sk-or-` |
+| Other OpenAI-compatible services | choose **Other** and enter the address |
 
-Without a key, the Scam Scanner and Link Checker still work offline with built-in rules. The key is stored only on your PC.
+Open **Settings → AI connection**, paste your key and click **Save & test**. Sentivyre detects the service and picks a good model, or you can type a model name yourself.
 
-## Business dashboard setup
-
-The dashboard lets a company see every PC running Sentivyre on one page. It uses a free Firebase Firestore database.
-
-1. In the [Firebase console](https://console.firebase.google.com), open your project, then go to **Build → Firestore Database → Create database**.
-2. Open the **Rules** tab, paste these rules and click **Publish**:
-   ```
-   rules_version = '2';
-   service cloud.firestore {
-     match /databases/{database}/documents {
-       match /teams/{team}/devices/{device} {
-         allow read, write: if true;
-       }
-     }
-   }
-   ```
-   > These rules are simple for a first version. Anyone who knows your project ID and team code can see the PCs, so pick a team code that's hard to guess.
-3. Go to **Project settings → General** and copy the **Project ID** and **Web API key**.
-4. On each PC, open **Sentivyre → Settings → Business dashboard**, fill in the PC name, team code, project ID and API key, then click **Save & test**.
-5. Deploy the `dashboard` folder to Netlify (drag the folder onto app.netlify.com/drop). Open it and enter the same team code, project ID and key. Use **View demo** to see sample data.
+Without a key, the Scam Scanner and Link Checker still work offline with built-in rules. Keys are stored only on your PC.
 
 ---
 

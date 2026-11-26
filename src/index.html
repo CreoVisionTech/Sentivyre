@@ -354,10 +354,15 @@ select{font:inherit;color:inherit;background:#0F0F12;border:1px solid #303036;bo
     </div>
     <div class="card">
       <h3 style="font-size:19px;margin-bottom:6px">AI connection</h3>
-      <p class="note" style="margin:0 0 14px">Vyra and the AI scam scan use Claude. Paste your Anthropic API key to turn them on. Without a key, Sentivyre uses its built-in offline rules.</p>
-      <label for="aiKey">Anthropic API key</label>
-      <div class="row" style="flex-wrap:nowrap"><input type="password" id="aiKey" placeholder="sk-ant-..." autocomplete="off"><button class="btn" id="aiSave" style="flex-shrink:0">Save</button></div>
-      <div class="row" style="margin-top:10px"><span class="note" id="aiMsg" style="margin:0"></span><button class="btn ghost hidden" id="aiRemove" style="padding:8px 14px;min-height:36px;font-size:13px">Remove key</button></div>
+      <p class="note" style="margin:0 0 14px">Vyra and the AI scam scan work with any AI service. Paste an API key from Claude, ChatGPT, Gemini, Groq or OpenRouter, and Sentivyre detects which one it is. Without a key, Sentivyre uses its built-in offline rules.</p>
+      <label for="aiProv">AI service</label>
+      <select id="aiProv" style="width:100%"><option value="auto">Auto-detect from key</option><option value="anthropic">Anthropic Claude</option><option value="openai">OpenAI ChatGPT</option><option value="gemini">Google Gemini</option><option value="groq">Groq</option><option value="openrouter">OpenRouter</option><option value="custom">Other (OpenAI-compatible)</option></select>
+      <label for="aiKey" style="margin-top:12px">API key</label>
+      <input type="password" id="aiKey" placeholder="sk-ant-… · sk-… · AIza… · gsk_… · sk-or-…" autocomplete="off">
+      <div id="aiBaseBox" class="hidden"><label for="aiBase" style="margin-top:12px">Service address</label><input type="text" id="aiBase" placeholder="https://api.example.com/v1"></div>
+      <details style="margin-top:12px"><summary class="note" style="cursor:pointer">Model (optional)</summary><input type="text" id="aiModel" placeholder="Leave empty for the recommended model" style="margin-top:10px"></details>
+      <div class="row" style="margin-top:14px"><button class="btn" id="aiSave">Save &amp; test</button><button class="btn ghost hidden" id="aiRemove">Remove key</button></div>
+      <p class="note" id="aiMsg"></p>
     </div>
     <div class="card">
       <h3 style="font-size:19px;margin-bottom:12px">What's new</h3>
@@ -592,8 +597,8 @@ $('unlockForm').addEventListener('submit',async e=>{e.preventDefault();if(await 
 
 // updates (real, via GitHub Releases)
 const S=window.sentivyre||null;
-const APP_VERSION='1.4.0';
-const CHANGELOG=[['1.4.0','Network checker for Wi-Fi safety and devices on your network, scheduled scans, "Ask Vyra" explanations for flagged files, Arabic language, and a business dashboard for companies.'],['1.3.0','New PC Scan: quick and full scans for dangerous files, Download Shield that checks every new download, quarantine, Microsoft Defender second opinion, and protection from the system tray.'],['1.2.0','Fixed automatic updates from GitHub. Update errors now show what went wrong.'],['1.1.0','Windows app with installer and automatic updates from GitHub. Settings tab: account login, app lock with PIN, notifications and AI connection.'],['1.0.0','First release: Scam Scanner, Link Checker, Password Guardian, Vyra AI Assistant and Panic Button.']];
+const APP_VERSION='1.5.0';
+const CHANGELOG=[['1.5.0','AI connection now works with any AI service: Claude, ChatGPT, Gemini, Groq, OpenRouter or any OpenAI-compatible service. Sentivyre detects the key type and picks a good model.'],['1.4.0','Network checker for Wi-Fi safety and devices on your network, scheduled scans, "Ask Vyra" explanations for flagged files, Arabic language, and a business dashboard for companies.'],['1.3.0','New PC Scan: quick and full scans for dangerous files, Download Shield that checks every new download, quarantine, Microsoft Defender second opinion, and protection from the system tray.'],['1.2.0','Fixed automatic updates from GitHub. Update errors now show what went wrong.'],['1.1.0','Windows app with installer and automatic updates from GitHub. Settings tab: account login, app lock with PIN, notifications and AI connection.'],['1.0.0','First release: Scam Scanner, Link Checker, Password Guardian, Vyra AI Assistant and Panic Button.']];
 let upd=store.get('upd',{auto:true,showNew:true,last:null,seen:null});
 $('autoUpd').checked=upd.auto;$('showNew').checked=upd.showNew;
 function setVer(v){$('verPill').textContent='v'+v;}
@@ -622,20 +627,48 @@ $('checkUpd').onclick=()=>{if(S)S.checkForUpdates();else $('updMsg').textContent
 $('installUpd').onclick=()=>{if(S)S.installUpdate();};
 $('updMsg').textContent=upd.last?'Up to date · checked '+ago(upd.last):'';
 
-// AI connection
-let aiKey=store.get('aikey','');
-function paintAI(){$('aiMsg').textContent=aiKey?'AI is connected ✓':'No key saved. AI features are off.';$('aiRemove').classList.toggle('hidden',!aiKey);$('aiOff').classList.toggle('hidden',!!aiKey);}
-$('aiSave').onclick=()=>{const k=$('aiKey').value.trim();if(!k.startsWith('sk-ant-')){$('aiMsg').textContent='That doesn\'t look like an Anthropic key (it starts with sk-ant-).';return;}aiKey=k;store.set('aikey',k);$('aiKey').value='';paintAI();toast('✓ AI connected','Vyra and the AI scam scan are now on.',false);};
-$('aiRemove').onclick=()=>{aiKey='';store.set('aikey','');paintAI();};
+// AI connection (any provider)
+const PROV_NAMES={anthropic:'Anthropic Claude',openai:'OpenAI ChatGPT',gemini:'Google Gemini',groq:'Groq',openrouter:'OpenRouter',custom:'Custom service'};
+function detectProv(k){k=String(k||'');if(k.startsWith('sk-ant-'))return 'anthropic';if(k.startsWith('sk-or-'))return 'openrouter';if(k.startsWith('gsk_'))return 'groq';if(k.startsWith('AIza'))return 'gemini';if(k.startsWith('sk-'))return 'openai';return '';}
+let aiCfg=store.get('aicfg',null);
+const oldKey=store.get('aikey','');if(!aiCfg&&oldKey){aiCfg={provider:'auto',key:oldKey,model:'',base:''};store.set('aicfg',aiCfg);}
+let aiKey=aiCfg&&aiCfg.key||'';
+function paintAI(){
+  aiKey=aiCfg&&aiCfg.key||'';
+  if(aiKey){const p=aiCfg.provider!=='auto'?aiCfg.provider:detectProv(aiKey);$('aiMsg').textContent='AI is connected ✓  '+(PROV_NAMES[p]||'')+(aiCfg.model?' · '+aiCfg.model:'');}
+  else $('aiMsg').textContent='No key saved. AI features are off.';
+  $('aiRemove').classList.toggle('hidden',!aiKey);$('aiOff').classList.toggle('hidden',!!aiKey);
+  if(aiCfg){$('aiProv').value=aiCfg.provider||'auto';$('aiModel').value=aiCfg.model||'';$('aiBase').value=aiCfg.base||'';}
+  $('aiBaseBox').classList.toggle('hidden',$('aiProv').value!=='custom');
+}
+$('aiProv').addEventListener('change',()=>$('aiBaseBox').classList.toggle('hidden',$('aiProv').value!=='custom'));
+$('aiKey').addEventListener('input',()=>{const p=detectProv($('aiKey').value.trim());if(p&&$('aiProv').value==='auto')$('aiMsg').textContent='Looks like a '+PROV_NAMES[p]+' key';});
+$('aiSave').onclick=async()=>{
+  const k=$('aiKey').value.trim()||aiKey;const prov=$('aiProv').value;
+  if(!k){$('aiMsg').textContent='Paste an API key first.';return;}
+  if(prov==='auto'&&!detectProv(k)){$('aiMsg').textContent='Could not tell which service this key is for. Choose the AI service above.';return;}
+  if(prov==='custom'&&!/^https:\/\//.test($('aiBase').value.trim())){$('aiMsg').textContent='Enter the service address (starting with https://).';return;}
+  const cfg={provider:prov,key:k,model:$('aiModel').value.trim(),base:$('aiBase').value.trim()};
+  if(!S){aiCfg=cfg;store.set('aicfg',cfg);$('aiKey').value='';paintAI();return;}
+  $('aiSave').disabled=true;$('aiMsg').textContent='Testing the key…';
+  try{
+    const r=await S.ai(cfg,'Reply with the single word: ready',[{role:'user',content:'Say ready'}]);
+    if(r&&r.model&&!cfg.model)cfg.model=r.model;
+    aiCfg=cfg;store.set('aicfg',cfg);store.set('aikey','');$('aiKey').value='';paintAI();
+    toast('✓ AI connected',(r&&r.providerName||'AI')+' is ready. Vyra and the AI scam scan are on.',false);
+  }catch(e){$('aiMsg').textContent='✕ '+String(e.message||e).replace(/^Error invoking remote method 'ai': (Error: )?/,'').slice(0,160);}
+  $('aiSave').disabled=false;
+};
+$('aiRemove').onclick=()=>{aiCfg=null;store.set('aicfg',null);store.set('aikey','');paintAI();};
 paintAI();
 // adapter so the rest of the app can call AI the same way
 function makeSample(){
-  const call=(system,messages)=>S.ai(aiKey,system,messages);
+  const call=async(system,messages)=>{const r=await S.ai(aiCfg,system,messages);if(r.model&&r.model!==aiCfg.model){aiCfg.model=r.model;store.set('aicfg',aiCfg);}return r.text||'';};
   const f=async(msgs,opts)=>{const sys=msgs.__system||'';const text=await call(sys,msgs.map(m=>({role:m.role,content:m.content})));if(opts&&opts.onText)opts.onText({text});return {text};};
   f.json=async(prompt)=>{const t=await call('Reply with JSON only, no other text.',[{role:'user',content:prompt}]);const m=t.match(/\{[\s\S]*\}/);return m?JSON.parse(m[0]):null;};
   return f;
 }
-Object.defineProperty(window,'__svyAI',{get(){return S&&aiKey?makeSample():null;}});
+Object.defineProperty(window,'__svyAI',{get(){return S&&aiCfg&&aiCfg.key?makeSample():null;}});
 
 // ---------- PC Scan ----------
 const LV={3:['DANGEROUS','var(--acc)'],2:['SUSPICIOUS','var(--warn)'],1:['CHECK','#9A9AA2']};

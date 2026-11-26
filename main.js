@@ -240,21 +240,81 @@ ipcMain.handle('set-auto-update', (_e, on) => {
 });
 ipcMain.handle('notify', (_e, { title, body }) => { notify(title, body); return true; });
 
-/* ---------- AI (optional, uses the user's own Anthropic API key) ---------- */
-ipcMain.handle('ai', async (_e, { key, system, messages }) => {
+/* ---------- AI (optional, any provider, uses the user's own API key) ---------- */
+const AI = {
+  anthropic: { name: 'Anthropic Claude', model: 'claude-haiku-5-5' },
+  openai: { name: 'OpenAI ChatGPT', model: 'gpt-4.1-mini', base: 'https://api.openai.com/v1' },
+  gemini: { name: 'Google Gemini', model: 'gemini-2.5-flash' },
+  groq: { name: 'Groq', model: 'llama-3.3-70b-versatile', base: 'https://api.groq.com/openai/v1' },
+  openrouter: { name: 'OpenRouter', model: 'openrouter/auto', base: 'https://openrouter.ai/api/v1' },
+  custom: { name: 'Custom', model: '' }
+};
+function detectProvider(key) {
+  key = String(key || '').trim();
+  if (key.startsWith('sk-ant-')) return 'anthropic';
+  if (key.startsWith('sk-or-')) return 'openrouter';
+  if (key.startsWith('gsk_')) return 'groq';
+  if (key.startsWith('AIza')) return 'gemini';
+  if (key.startsWith('sk-')) return 'openai';
+  return '';
+}
+async function jsonFetch(url, opts) {
+  const res = await fetch(url, opts);
+  let data = null; try { data = await res.json(); } catch (e) { /* not json */ }
+  if (!res.ok) {
+    const msg = (data && ((data.error && (data.error.message || data.error)) || data.message)) || ('HTTP ' + res.status);
+    const err = new Error(typeof msg === 'string' ? msg : JSON.stringify(msg)); err.status = res.status; throw err;
+  }
+  return data;
+}
+async function callModel(p, key, model, base, system, messages) {
+  if (p === 'anthropic') {
+    const d = await jsonFetch('https://api.anthropic.com/v1/messages', { method: 'POST', headers: { 'content-type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' }, body: JSON.stringify({ model, max_tokens: 700, system, messages }) });
+    return (d.content || []).filter((x) => x.type === 'text').map((x) => x.text).join('');
+  }
+  if (p === 'gemini') {
+    const d = await jsonFetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(key), {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents: messages.map((m) => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })), generationConfig: { maxOutputTokens: 700 } })
+    });
+    return ((d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts) || []).map((x) => x.text || '').join('');
+  }
+  // OpenAI-compatible: OpenAI, Groq, OpenRouter, custom
+  const url = String(base || '').replace(/\/+$/, '') + '/chat/completions';
+  if (!/^https:\/\//.test(url)) throw new Error('The custom address must start with https://');
+  const d = await jsonFetch(url, { method: 'POST', headers: { 'content-type': 'application/json', authorization: 'Bearer ' + key, 'HTTP-Referer': 'https://github.com/CreoVisionTech/sentivyre', 'X-Title': 'Sentivyre' }, body: JSON.stringify({ model, max_tokens: 700, messages: [{ role: 'system', content: system }, ...messages] }) });
+  return (d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content) || '';
+}
+// If the chosen model doesn't exist for this key, pick a good one from the provider's model list
+async function pickModel(p, key, base) {
+  let ids = [];
+  try {
+    if (p === 'anthropic') ids = ((await jsonFetch('https://api.anthropic.com/v1/models?limit=100', { headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01' } })).data || []).map((m) => m.id);
+    else if (p === 'gemini') ids = ((await jsonFetch('https://generativelanguage.googleapis.com/v1beta/models?pageSize=200&key=' + encodeURIComponent(key))).models || []).filter((m) => (m.supportedGenerationMethods || []).includes('generateContent')).map((m) => m.name.replace(/^models\//, ''));
+    else ids = ((await jsonFetch(String(base).replace(/\/+$/, '') + '/models', { headers: { authorization: 'Bearer ' + key } })).data || []).map((m) => m.id);
+  } catch (e) { return ''; }
+  const prefs = { anthropic: [/haiku/, /sonnet/], gemini: [/flash(?!.*(image|tts|audio|live|thinking))/, /pro/], openai: [/^gpt-[\d.]+-mini$/, /^gpt-[\d.o]+-mini/, /^gpt-/], groq: [/llama.*70b/, /llama/], openrouter: [/auto/], custom: [/./] }[p] || [/./];
+  for (const re of prefs) { const hit = ids.filter((id) => re.test(id)).sort().reverse()[0]; if (hit) return hit; }
+  return ids[0] || '';
+}
+ipcMain.handle('ai', async (_e, { cfg, system, messages }) => {
+  const key = String((cfg && cfg.key) || '').trim();
   if (!key) throw new Error('no_key');
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': key,
-      'anthropic-version': '2023-06-01'
-    },
-    body: JSON.stringify({ model: 'claude-haiku-5-5', max_tokens: 700, system, messages })
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error((data && data.error && data.error.message) || ('HTTP ' + res.status));
-  return (data.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('');
+  const p = (cfg.provider && cfg.provider !== 'auto') ? cfg.provider : (detectProvider(key) || 'openai');
+  const info = AI[p] || AI.openai;
+  const base = p === 'custom' ? cfg.base : info.base;
+  let model = (cfg.model || '').trim() || info.model;
+  if (!model && p === 'custom') model = await pickModel(p, key, base);
+  try {
+    return { text: await callModel(p, key, model, base, system, messages), provider: p, providerName: info.name, model };
+  } catch (err) {
+    if (err.status === 401 || err.status === 403) throw new Error('The API key was rejected by ' + info.name + '.');
+    if (err.status === 404 || err.status === 400 && /model/i.test(err.message) || /model/i.test(err.message) && /not|exist|found|support/i.test(err.message)) {
+      const better = await pickModel(p, key, base);
+      if (better && better !== model) return { text: await callModel(p, key, better, base, system, messages), provider: p, providerName: info.name, model: better };
+    }
+    throw err;
+  }
 });
 
 app.on('second-instance', showWindow);

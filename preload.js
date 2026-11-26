@@ -8,7 +8,7 @@ contextBridge.exposeInMainWorld('sentivyre', {
   setAutoUpdate: (on) => ipcRenderer.invoke('set-auto-update', on),
   onUpdateStatus: (fn) => ipcRenderer.on('update-status', (_e, s) => fn(s)),
   notify: (title, body) => ipcRenderer.invoke('notify', { title, body }),
-  ai: (key, system, messages) => ipcRenderer.invoke('ai', { key, system, messages }),
+  ai: (cfg, system, messages) => ipcRenderer.invoke('ai', { cfg, system, messages }),
   scanStart: (kind) => ipcRenderer.invoke('scan-start', kind),
   scanCancel: () => ipcRenderer.invoke('scan-cancel'),
   onScanStatus: (fn) => ipcRenderer.on('scan-status', (_e, s) => fn(s)),

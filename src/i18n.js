@@ -105,7 +105,10 @@ var LANG = 'en';
     'Updates work in the installed app only.': 'التحديثات تعمل في التطبيق المثبت فقط.', 'Automatic updates are on.': 'التحديثات التلقائية مفعّلة.',
     'Could not reach GitHub. Check your internet connection.': 'تعذر الوصول إلى GitHub. تحقق من اتصالك بالإنترنت.', 'Checking GitHub for a new version…': 'جارٍ البحث في GitHub عن إصدار جديد…',
     '✓ Signed in': '✓ تم تسجيل الدخول', '✓ PIN saved': '✓ تم حفظ الرمز', 'App lock is on.': 'قفل التطبيق مفعّل.', '✓ AI connected': '✓ تم الاتصال بالذكاء الاصطناعي',
-    'No scan yet': 'لا يوجد فحص بعد', 'PC Scan works in the installed Windows app.': 'فحص الجهاز يعمل في تطبيق Windows المثبت.'
+    'No scan yet': 'لا يوجد فحص بعد', 'AI service': 'خدمة الذكاء الاصطناعي', 'Auto-detect from key': 'اكتشاف تلقائي من المفتاح', 'Other (OpenAI-compatible)': 'خدمة أخرى (متوافقة مع OpenAI)',
+    'API key': 'مفتاح API', 'Service address': 'عنوان الخدمة', 'Model (optional)': 'النموذج (اختياري)', 'Leave empty for the recommended model': 'اتركه فارغاً لاستخدام النموذج المقترح', 'Testing the key…': 'جارٍ اختبار المفتاح…',
+    'Paste an API key first.': 'الصق مفتاح API أولاً.', 'Could not tell which service this key is for. Choose the AI service above.': 'تعذر معرفة الخدمة الخاصة بهذا المفتاح. اختر خدمة الذكاء الاصطناعي أعلاه.',
+    'Vyra and the AI scam scan work with any AI service. Paste an API key from Claude, ChatGPT, Gemini, Groq or OpenRouter, and Sentivyre detects which one it is. Without a key, Sentivyre uses its built-in offline rules.': 'تعمل فيرا والفحص الذكي للاحتيال مع أي خدمة ذكاء اصطناعي. الصق مفتاح API من Claude أو ChatGPT أو Gemini أو Groq أو OpenRouter، وسيكتشف سنتيفاير نوعه. بدون مفتاح، يستخدم سنتيفاير قواعده المدمجة.', 'PC Scan works in the installed Windows app.': 'فحص الجهاز يعمل في تطبيق Windows المثبت.'
   };
   var REASONS = {
     'Fake file type: looks like a document or picture but is really a program': 'نوع ملف مزيف: يبدو مستنداً أو صورة لكنه في الحقيقة برنامج',
