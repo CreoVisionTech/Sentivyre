@@ -1,7 +1,7 @@
 {
   "name": "sentivyre",
   "productName": "Sentivyre",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Sentivyre by Vyrelock - AI cybersecurity for your PC",
   "author": "Vyrelock Technologies <creovisiontech4@gmail.com>",
   "license": "UNLICENSED",
@@ -35,6 +35,7 @@
     "files": [
       "main.js",
       "preload.js",
+      "scanner.js",
       "src/**/*",
       "package.json"
     ],

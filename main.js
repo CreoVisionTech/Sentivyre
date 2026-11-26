@@ -1,10 +1,23 @@
 // Sentivyre by Vyrelock - Windows desktop app (Electron main process)
-const { app, BrowserWindow, ipcMain, shell, Menu, Notification } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, Menu, Notification, Tray, nativeImage } = require('electron');
 const path = require('path');
+const fs = require('fs');
+const scanner = require('./scanner');
 const { autoUpdater } = require('electron-updater');
 
 let win = null;
+let tray = null;
+let quitting = false;
 let autoUpdate = true;
+let currentScan = null;
+let watcher = null;
+
+/* ---------- Settings kept by the app itself ---------- */
+const settingsFile = () => path.join(app.getPath('userData'), 'settings.json');
+let settings = { downloadShield: true, background: true, autostart: false };
+function loadSettings() { try { settings = { ...settings, ...JSON.parse(fs.readFileSync(settingsFile(), 'utf8')) }; } catch (e) { /* defaults */ } }
+function saveSettings() { try { fs.writeFileSync(settingsFile(), JSON.stringify(settings)); } catch (e) { /* ignore */ } }
+const qdir = () => path.join(app.getPath('userData'), 'quarantine');
 
 if (!app.requestSingleInstanceLock()) {
   app.quit();
@@ -35,7 +48,13 @@ function createWindow() {
   });
   Menu.setApplicationMenu(null);
   win.loadFile(path.join(__dirname, 'src', 'index.html'));
-  win.once('ready-to-show', () => win.show());
+  win.once('ready-to-show', () => { if (!process.argv.includes('--hidden')) win.show(); });
+  win.on('close', (e) => {
+    if (!quitting && settings.background) {
+      e.preventDefault(); win.hide();
+      notify('Sentivyre is still protecting you', 'Download Shield keeps running in the system tray.', true);
+    }
+  });
 
   // Open web links in the normal browser, never inside the app
   win.webContents.setWindowOpenHandler(({ url }) => {
@@ -46,6 +65,77 @@ function createWindow() {
     if (!url.startsWith('file://')) { e.preventDefault(); if (url.startsWith('https://')) shell.openExternal(url); }
   });
 }
+
+function showWindow() { if (!win) return; if (win.isMinimized()) win.restore(); win.show(); win.focus(); }
+let toldTray = false;
+function notify(title, body, once) {
+  if (once) { if (toldTray) return; toldTray = true; }
+  if (!Notification.isSupported()) return;
+  const n = new Notification({ title: String(title), body: String(body), icon: path.join(__dirname, 'src', 'icon.png') });
+  n.on('click', showWindow); n.show();
+}
+
+function createTray() {
+  const img = nativeImage.createFromPath(path.join(__dirname, 'src', 'icon.png')).resize({ width: 16, height: 16 });
+  tray = new Tray(img);
+  tray.setToolTip('Sentivyre - protecting your PC');
+  tray.setContextMenu(Menu.buildFromTemplate([
+    { label: 'Open Sentivyre', click: showWindow },
+    { label: 'Run quick scan', click: () => { showWindow(); send('run-scan', 'quick'); } },
+    { type: 'separator' },
+    { label: 'Quit Sentivyre', click: () => { quitting = true; app.quit(); } }
+  ]));
+  tray.on('click', showWindow);
+}
+
+/* ---------- PC scan ---------- */
+const paths = { downloads: () => app.getPath('downloads'), desktop: () => app.getPath('desktop'), documents: () => app.getPath('documents') };
+ipcMain.handle('scan-start', (_e, kind) => {
+  if (currentScan) return false;
+  currentScan = scanner.createScan(kind === 'full' ? 'full' : 'quick', paths, (st) => {
+    send('scan-status', st);
+    if (st.state === 'done') {
+      const bad = st.found.filter((f) => f.level >= 2).length + (st.defender && st.defender.threat ? 1 : 0);
+      if (win && !win.isVisible()) notify(bad ? 'Sentivyre found ' + bad + ' threat(s)' : 'Scan complete: your PC looks safe', bad ? 'Open Sentivyre to review them.' : st.files + ' files checked.');
+    }
+  });
+  currentScan.run().catch((err) => send('scan-status', { state: 'error', message: String(err.message || err) })).finally(() => { currentScan = null; });
+  return true;
+});
+ipcMain.handle('scan-cancel', () => { if (currentScan) currentScan.cancel(); return true; });
+ipcMain.handle('defender-available', () => !!scanner.defenderPath());
+
+/* ---------- Download Shield ---------- */
+function setShield(on) {
+  settings.downloadShield = !!on; saveSettings();
+  if (on) {
+    if (!watcher) watcher = scanner.createDownloadWatcher(app.getPath('downloads'), (r) => {
+      send('download-scanned', r);
+      if (r.level >= 2) notify('⚠ Dangerous download: ' + r.name, r.reasons[0] + '. Open Sentivyre to quarantine it.');
+      else if (r.level === 1) notify('Check this download: ' + r.name, r.reasons[0] + '. Only open it if you trust where it came from.');
+    });
+    watcher.start();
+  } else if (watcher) { watcher.stop(); watcher = null; }
+  return settings.downloadShield;
+}
+ipcMain.handle('shield-set', (_e, on) => setShield(on));
+
+/* ---------- Quarantine & files ---------- */
+ipcMain.handle('quarantine', (_e, file) => scanner.quarantine(file, qdir()));
+ipcMain.handle('quarantine-list', () => scanner.quarantineList(qdir()));
+ipcMain.handle('quarantine-restore', (_e, id) => scanner.restore(id, qdir()));
+ipcMain.handle('quarantine-delete', (_e, id) => { scanner.removeForever(id, qdir()); return true; });
+ipcMain.handle('show-file', (_e, file) => { shell.showItemInFolder(file); return true; });
+ipcMain.handle('open-defender', () => shell.openExternal('windowsdefender://threat/'));
+
+/* ---------- Background & start-up ---------- */
+ipcMain.handle('get-settings', () => ({ ...settings, downloads: app.getPath('downloads') }));
+ipcMain.handle('set-background', (_e, on) => { settings.background = !!on; saveSettings(); return settings.background; });
+ipcMain.handle('set-autostart', (_e, on) => {
+  settings.autostart = !!on; saveSettings();
+  if (app.isPackaged) app.setLoginItemSettings({ openAtLogin: settings.autostart, args: ['--hidden'] });
+  return settings.autostart;
+});
 
 /* ---------- Auto update (GitHub Releases) ---------- */
 // Where to look for updates: GitHub Releases of CreoVisionTech/sentivyre
@@ -82,10 +172,7 @@ ipcMain.handle('set-auto-update', (_e, on) => {
   autoUpdater.autoInstallOnAppQuit = autoUpdate;
   return autoUpdate;
 });
-ipcMain.handle('notify', (_e, { title, body }) => {
-  if (Notification.isSupported()) new Notification({ title: String(title), body: String(body) }).show();
-  return true;
-});
+ipcMain.handle('notify', (_e, { title, body }) => { notify(title, body); return true; });
 
 /* ---------- AI (optional, uses the user's own Anthropic API key) ---------- */
 ipcMain.handle('ai', async (_e, { key, system, messages }) => {
@@ -104,15 +191,17 @@ ipcMain.handle('ai', async (_e, { key, system, messages }) => {
   return (data.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('');
 });
 
-app.on('second-instance', () => {
-  if (win) { if (win.isMinimized()) win.restore(); win.focus(); }
-});
+app.on('second-instance', showWindow);
+app.on('before-quit', () => { quitting = true; });
 
 app.whenReady().then(() => {
+  loadSettings();
   createWindow();
+  createTray();
+  if (settings.downloadShield) setShield(true);
   // Check for updates a few seconds after start-up, then every 4 hours
   setTimeout(() => { if (autoUpdate) checkForUpdates(); }, 4000);
   setInterval(() => { if (autoUpdate) checkForUpdates(); }, 4 * 60 * 60 * 1000);
 });
 
-app.on('window-all-closed', () => app.quit());
+app.on('window-all-closed', () => { if (!settings.background) app.quit(); });

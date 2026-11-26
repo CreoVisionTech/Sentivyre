@@ -111,6 +111,18 @@ main::before{animation:topGlow 9s ease-in-out infinite alternate}
 @keyframes tin{from{opacity:0;transform:translateY(12px)}}
 #lock{position:fixed;inset:0;z-index:100;background:radial-gradient(circle at 50% 30%,#2a120c 0%,#0B0B0D 60%);display:flex;align-items:center;justify-content:center;padding:20px}
 #lock .card{width:100%;max-width:380px;text-align:center;display:flex;flex-direction:column;gap:16px;align-items:center}
+.found{display:flex;gap:14px;align-items:flex-start;background:var(--card2);border-radius:12px;padding:14px 16px;margin-top:10px}
+.found .meta{flex:1;min-width:0}
+.found .path{font-size:12px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:4px}
+.found .acts{display:flex;gap:8px;flex-wrap:wrap;flex-shrink:0}
+.sbtn{border:1px solid #3A3A40;background:transparent;color:var(--text);border-radius:10px;padding:8px 12px;font-size:13px;cursor:pointer;min-height:36px}
+.sbtn:hover{border-color:var(--acc)}
+.sbtn.red{background:var(--btn);border-color:var(--btn);color:#fff}
+.lvl{font-size:11px;font-weight:700;padding:4px 9px;border-radius:99px;color:#0B0B0D;flex-shrink:0;margin-top:2px}
+.radar{width:120px;height:120px;border-radius:50%;border:2px solid #3a1a12;position:relative;flex-shrink:0;background:radial-gradient(circle,rgba(255,74,28,.15),transparent 70%)}
+.radar::after{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 0deg,rgba(255,74,28,.55),transparent 25%);animation:spin 1.6s linear infinite;display:none}
+.radar.on::after{display:block}
+@keyframes spin{to{transform:rotate(360deg)}}
 @media(max-width:760px){.app{flex-direction:column}aside{width:auto;flex-direction:row;flex-wrap:wrap}.brand{width:100%;padding-bottom:8px}.nav{width:auto}.nav.panic{margin-top:0}}
 </style>
 </head>
@@ -122,6 +134,7 @@ main::before{animation:topGlow 9s ease-in-out infinite alternate}
     <div><b>SENTIVYRE</b><small>BY VYRELOCK</small></div>
   </div>
   <button class="nav on" data-v="dash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Dashboard</button>
+  <button class="nav" data-v="pcscan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/><path d="M8.5 10.5l2 2 5-5"/></svg>PC Scan</button>
   <button class="nav" data-v="scan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>Scam Scanner</button>
   <button class="nav" data-v="link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M10 14a4 4 0 005.7 0l3-3a4 4 0 00-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 00-5.7 0l-3 3a4 4 0 005.7 5.7l1-1"/></svg>Link Checker</button>
   <button class="nav" data-v="pass"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>Password Guardian</button>
@@ -146,10 +159,42 @@ main::before{animation:topGlow 9s ease-in-out infinite alternate}
       <div class="log" id="log"></div></div>
   </div>
   <div class="grid g4" style="margin-top:18px">
+    <button class="card nav" data-v="pcscan" style="padding:20px;display:block"><b style="color:#fff">Scan my PC →</b><div class="note">Find dangerous files</div></button>
     <button class="card nav" data-v="scan" style="padding:20px;display:block"><b style="color:#fff">Check a message →</b><div class="note">Paste an SMS, email or WhatsApp text</div></button>
     <button class="card nav" data-v="link" style="padding:20px;display:block"><b style="color:#fff">Check a link →</b><div class="note">Spot fake and phishing websites</div></button>
     <button class="card nav" data-v="pass" style="padding:20px;display:block"><b style="color:#fff">Test a password →</b><div class="note">Checked only on your PC</div></button>
     <button class="card nav" data-v="vyra" style="padding:20px;display:block"><b style="color:#fff">Ask Vyra →</b><div class="note">Your AI security assistant</div></button>
+  </div>
+</section>
+
+<!-- PC SCAN -->
+<section class="view" id="v-pcscan">
+  <div class="top"><div><h1>PC Scan</h1><p>Check your PC for dangerous files, and keep new downloads safe.</p></div></div>
+  <div class="card">
+    <div class="row" style="gap:28px;flex-wrap:nowrap;align-items:center">
+      <div class="radar" id="radar"><svg viewBox="0 0 100 100" style="position:absolute;inset:30px;width:60px;height:60px" aria-hidden="true"><path d="M50 6 L86 19 V48 C86 72 70 88 50 95 C30 88 14 72 14 48 V19 Z" fill="none" stroke="#FF4A1C" stroke-width="7" stroke-linejoin="round"/><path d="M33 38 L50 70 L67 38" fill="none" stroke="#fff" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div style="flex:1;min-width:0">
+        <h3 id="scanTitle" style="font-size:22px">Ready to scan</h3>
+        <p class="note" id="scanSub" style="margin:6px 0 0">Quick scan checks Downloads, Desktop, Documents, start-up programs and temporary files. Full scan checks your whole user folder.</p>
+        <p class="note" id="scanPath" style="margin:6px 0 0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></p>
+        <div class="row" style="margin-top:16px"><button class="btn" id="quickScan">Quick scan</button><button class="btn ghost" id="fullScan">Full scan</button><button class="btn ghost hidden" id="cancelScan">Cancel</button></div>
+        <p class="note" id="defNote"></p>
+      </div>
+    </div>
+    <div id="defBanner" class="hidden" style="margin-top:16px;background:#2a120c;border:1px solid #5a2316;border-radius:12px;padding:14px 16px"><b style="color:var(--acc)">Microsoft Defender found threats on your PC.</b><div class="row" style="margin-top:10px"><button class="sbtn red" id="openDef">Open Windows Security</button></div></div>
+    <div id="scanResults"></div>
+  </div>
+  <div class="grid g2" style="margin-top:18px">
+    <div class="card">
+      <div class="row" style="justify-content:space-between"><h3 style="font-size:19px">Download Shield</h3></div>
+      <label class="sw"><span>Scan every new download<small id="dlWhere">Checks each file as soon as it lands in your Downloads folder</small></span><input type="checkbox" id="shieldOn"></label>
+      <div id="dlList"><p class="note">No downloads checked yet.</p></div>
+    </div>
+    <div class="card">
+      <h3 style="font-size:19px;margin-bottom:6px">Quarantine</h3>
+      <p class="note" style="margin:0 0 6px">Files moved here can't run. Restore them if you're sure they're safe.</p>
+      <div id="qList"><p class="note">Nothing in quarantine.</p></div>
+    </div>
   </div>
 </section>
 
@@ -240,6 +285,8 @@ main::before{animation:topGlow 9s ease-in-out infinite alternate}
       <label class="sw"><span>Safe results<small>Pop-up when a check comes back clean</small></span><input type="checkbox" data-n="safe"></label>
       <label class="sw"><span>Alert sound<small>Play a short sound with threat alerts</small></span><input type="checkbox" data-n="sound"></label>
       <label class="sw"><span>Daily security tip<small>Show a tip on the dashboard</small></span><input type="checkbox" data-n="tips"></label>
+      <label class="sw"><span>Keep protecting when closed<small>Sentivyre stays in the system tray and keeps checking downloads</small></span><input type="checkbox" id="bgOn"></label>
+      <label class="sw"><span>Start with Windows<small>Open Sentivyre quietly in the tray when your PC starts</small></span><input type="checkbox" id="autoOn"></label>
       <div class="row" style="margin-top:16px"><button class="btn ghost" id="testNote">Send test notification</button></div>
     </div>
     <div class="card">
@@ -488,8 +535,8 @@ $('unlockForm').addEventListener('submit',async e=>{e.preventDefault();if(await 
 
 // updates (real, via GitHub Releases)
 const S=window.sentivyre||null;
-const APP_VERSION='1.2.0';
-const CHANGELOG=[['1.2.0','Fixed automatic updates from GitHub. Update errors now show what went wrong.'],['1.1.0','Windows app with installer and automatic updates from GitHub. Settings tab: account login, app lock with PIN, notifications and AI connection.'],['1.0.0','First release: Scam Scanner, Link Checker, Password Guardian, Vyra AI Assistant and Panic Button.']];
+const APP_VERSION='1.3.0';
+const CHANGELOG=[['1.3.0','New PC Scan: quick and full scans for dangerous files, Download Shield that checks every new download, quarantine, Microsoft Defender second opinion, and protection from the system tray.'],['1.2.0','Fixed automatic updates from GitHub. Update errors now show what went wrong.'],['1.1.0','Windows app with installer and automatic updates from GitHub. Settings tab: account login, app lock with PIN, notifications and AI connection.'],['1.0.0','First release: Scam Scanner, Link Checker, Password Guardian, Vyra AI Assistant and Panic Button.']];
 let upd=store.get('upd',{auto:true,showNew:true,last:null,seen:null});
 $('autoUpd').checked=upd.auto;$('showNew').checked=upd.showNew;
 function setVer(v){$('verPill').textContent='v'+v;}
@@ -532,6 +579,59 @@ function makeSample(){
   return f;
 }
 Object.defineProperty(window,'__svyAI',{get(){return S&&aiKey?makeSample():null;}});
+
+// ---------- PC Scan ----------
+const LV={3:['DANGEROUS','var(--acc)'],2:['SUSPICIOUS','var(--warn)'],1:['CHECK','#9A9AA2']};
+function el(tag,cls,txt){const e=document.createElement(tag);if(cls)e.className=cls;if(txt!=null)e.textContent=txt;return e;}
+function foundRow(f,onDone){
+  const row=el('div','found');const lv=LV[f.level]||LV[1];const pill=el('span','lvl',lv[0]);pill.style.background=lv[1];row.appendChild(pill);
+  const meta=el('div','meta');meta.appendChild(el('b',null,f.name));meta.appendChild(el('div','note',f.reasons.join(' · ')));meta.lastChild.style.margin='4px 0 0';meta.appendChild(el('div','path',f.file));row.appendChild(meta);
+  const acts=el('div','acts');
+  const q=el('button','sbtn red','Quarantine');q.onclick=async()=>{try{await S.quarantine(f.file);row.remove();toast('✓ Quarantined',f.name+' can no longer run.',false);loadQ();if(onDone)onDone();}catch(e){toast('Could not quarantine',String(e.message||e),true);}};
+  const sh=el('button','sbtn','Show');sh.onclick=()=>S.showFile(f.file);
+  const ig=el('button','sbtn','Ignore');ig.onclick=()=>{row.remove();if(onDone)onDone();};
+  acts.append(q,sh,ig);row.appendChild(acts);return row;
+}
+let scanKind='quick';
+function setScanning(on){$('quickScan').disabled=on;$('fullScan').disabled=on;$('cancelScan').classList.toggle('hidden',!on);$('radar').classList.toggle('on',on);}
+if(S){
+  S.defenderAvailable().then(ok=>{$('defNote').textContent=ok?'✓ Microsoft Defender is also used for a second opinion.':'Microsoft Defender was not found, so Sentivyre uses its own checks only.';});
+  $('quickScan').onclick=()=>{scanKind='quick';S.scanStart('quick');};
+  $('fullScan').onclick=()=>{scanKind='full';S.scanStart('full');};
+  $('cancelScan').onclick=()=>S.scanCancel();
+  $('openDef').onclick=()=>S.openDefender();
+  S.onRunScan(k=>{show('pcscan');S.scanStart(k);});
+  S.onScanStatus(st=>{
+    if(st.state==='started'){setScanning(true);$('scanTitle').textContent=(st.kind==='full'?'Full':'Quick')+' scan running…';$('scanSub').textContent='0 files checked';$('scanResults').textContent='';$('defBanner').classList.add('hidden');}
+    if(st.state==='progress'){$('scanSub').textContent=st.files.toLocaleString()+' files checked · '+st.found+' to review';$('scanPath').textContent=st.current;}
+    if(st.state==='done'||st.state==='cancelled'){
+      setScanning(false);$('scanPath').textContent='';
+      if(st.state==='cancelled'){$('scanTitle').textContent='Scan cancelled';return;}
+      const bad=st.found.filter(f=>f.level>=2).length;const defBad=st.defender&&st.defender.threat;
+      $('defBanner').classList.toggle('hidden',!defBad);
+      $('scanTitle').textContent=bad||defBad?'⚠ Threats found':(st.found.length?'Scan complete: a few files to check':'✓ Your PC looks safe');
+      $('scanTitle').style.color=bad||defBad?'var(--acc)':(st.found.length?'var(--warn)':'var(--ok)');
+      $('scanSub').textContent=st.files.toLocaleString()+' files checked · '+st.found.length+' to review';
+      const box=$('scanResults');box.textContent='';st.found.slice(0,200).forEach(f=>box.appendChild(foundRow(f)));
+      record((st.kind==='full'?'Full':'Quick')+' scan: '+(bad||defBad?'threats found':'no threats'),!!(bad||defBad));
+    }
+    if(st.state==='error'){setScanning(false);$('scanTitle').textContent='Scan stopped';$('scanSub').textContent=st.message;}
+  });
+  // Download Shield
+  const dl=[];
+  function paintDl(){const b=$('dlList');b.textContent='';if(!dl.length){b.appendChild(el('p','note','No downloads checked yet.'));return;}dl.slice(0,8).forEach(r=>{if(r.level){b.appendChild(foundRow(r));}else{const d=el('div','found');const p=el('span','lvl','SAFE');p.style.background='var(--ok)';d.appendChild(p);const m=el('div','meta');m.appendChild(el('b',null,r.name));m.appendChild(el('div','note',r.defender?'Checked by Sentivyre and Microsoft Defender':'Checked by Sentivyre'));m.lastChild.style.margin='4px 0 0';d.appendChild(m);b.appendChild(d);}});}
+  S.onDownloadScanned(r=>{dl.unshift(r);paintDl();record('Download checked: '+r.name+(r.level>=2?' (dangerous)':''),r.level>=2);if(r.level>=2&&!document.hidden)toast('⚠ Dangerous download',r.name+': '+r.reasons[0],true);});
+  S.getSettings().then(st=>{$('shieldOn').checked=st.downloadShield;$('bgOn').checked=st.background;$('autoOn').checked=st.autostart;$('dlWhere').textContent='Checks each file as soon as it lands in '+st.downloads;});
+  $('shieldOn').addEventListener('change',()=>S.setShield($('shieldOn').checked));
+  $('bgOn').addEventListener('change',()=>S.setBackground($('bgOn').checked));
+  $('autoOn').addEventListener('change',()=>S.setAutostart($('autoOn').checked));
+  // Quarantine
+  window.loadQ=async function(){const list=await S.quarantineList();const b=$('qList');b.textContent='';if(!list.length){b.appendChild(el('p','note','Nothing in quarantine.'));return;}list.forEach(q=>{const d=el('div','found');const m=el('div','meta');m.appendChild(el('b',null,q.name));m.appendChild(el('div','path',q.original));d.appendChild(m);const a=el('div','acts');const r=el('button','sbtn','Restore');r.onclick=async()=>{try{const to=await S.restore(q.id);toast('✓ Restored',to,false);loadQ();}catch(e){toast('Could not restore',String(e.message||e),true);}};const x=el('button','sbtn','Delete forever');let armed=false;x.onclick=async()=>{if(!armed){armed=true;x.textContent='Click again to delete';x.classList.add('red');setTimeout(()=>{armed=false;x.textContent='Delete forever';x.classList.remove('red');},4000);return;}await S.deleteForever(q.id);loadQ();};a.append(r,x);d.appendChild(a);b.appendChild(d);});};
+  loadQ();
+}else{
+  ['quickScan','fullScan'].forEach(id=>$(id).disabled=true);$('defNote').textContent='PC Scan works in the installed Windows app.';$('shieldOn').disabled=true;$('bgOn').disabled=true;$('autoOn').disabled=true;
+}
+function loadQ(){if(window.loadQ&&window.loadQ!==loadQ)window.loadQ();}
 
 // AI is looked up each time it is needed
 setInterval(renderDash,60000);

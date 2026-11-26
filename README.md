@@ -19,12 +19,15 @@ It is made by **Vyrelock Technologies**, a startup founded by **Hasan Bhatti** i
 | Feature | What it does |
 |---|---|
 | 🛡️ **Dashboard** | Safety score, scans run, threats caught and recent activity |
+| 🖥️ **PC Scan** | Quick and full scans for dangerous files (fake file types, risky programs, start-up scripts), with Microsoft Defender as a second opinion |
+| ⬇️ **Download Shield** | Checks every new file in your Downloads folder the moment it arrives, and warns you if it's dangerous |
+| 🔒 **Quarantine** | Moves dangerous files somewhere they can't run, with Restore and Delete forever |
 | ✉️ **Scam Scanner** | Paste an SMS, email or WhatsApp message to find out if it's a scam (AI or offline rules) |
 | 🔗 **Link Checker** | Spots fake and phishing links: look-alike brands, unsafe domains, shortened links, IP addresses |
 | 🔑 **Password Guardian** | Shows password strength and time to crack, and makes strong passwords. Nothing leaves your PC. |
 | 🤖 **Vyra AI Assistant** | An AI chat for security questions in English or Arabic |
 | ⚠️ **Panic Button** | A step-by-step checklist to follow if you've been hacked |
-| ⚙️ **Settings** | Account login, app lock with PIN, notifications, AI connection and automatic updates |
+| ⚙️ **Settings** | Account login, app lock with PIN, notifications, AI connection, automatic updates, start with Windows and protection from the system tray |
 
 ## Download & install
 
@@ -67,6 +70,7 @@ Without a key, the Scam Scanner and Link Checker still work offline with built-i
 sentivyre/
 ├── main.js                  # App window, auto-updater, AI requests
 ├── preload.js               # Safe bridge between the window and the app
+├── scanner.js               # PC Scan, Download Shield and quarantine
 ├── src/
 │   ├── index.html           # The whole app interface
 │   └── icon.png

@@ -8,5 +8,21 @@ contextBridge.exposeInMainWorld('sentivyre', {
   setAutoUpdate: (on) => ipcRenderer.invoke('set-auto-update', on),
   onUpdateStatus: (fn) => ipcRenderer.on('update-status', (_e, s) => fn(s)),
   notify: (title, body) => ipcRenderer.invoke('notify', { title, body }),
-  ai: (key, system, messages) => ipcRenderer.invoke('ai', { key, system, messages })
+  ai: (key, system, messages) => ipcRenderer.invoke('ai', { key, system, messages }),
+  scanStart: (kind) => ipcRenderer.invoke('scan-start', kind),
+  scanCancel: () => ipcRenderer.invoke('scan-cancel'),
+  onScanStatus: (fn) => ipcRenderer.on('scan-status', (_e, s) => fn(s)),
+  onRunScan: (fn) => ipcRenderer.on('run-scan', (_e, k) => fn(k)),
+  defenderAvailable: () => ipcRenderer.invoke('defender-available'),
+  setShield: (on) => ipcRenderer.invoke('shield-set', on),
+  onDownloadScanned: (fn) => ipcRenderer.on('download-scanned', (_e, r) => fn(r)),
+  quarantine: (file) => ipcRenderer.invoke('quarantine', file),
+  quarantineList: () => ipcRenderer.invoke('quarantine-list'),
+  restore: (id) => ipcRenderer.invoke('quarantine-restore', id),
+  deleteForever: (id) => ipcRenderer.invoke('quarantine-delete', id),
+  showFile: (file) => ipcRenderer.invoke('show-file', file),
+  openDefender: () => ipcRenderer.invoke('open-defender'),
+  getSettings: () => ipcRenderer.invoke('get-settings'),
+  setBackground: (on) => ipcRenderer.invoke('set-background', on),
+  setAutostart: (on) => ipcRenderer.invoke('set-autostart', on)
 });
