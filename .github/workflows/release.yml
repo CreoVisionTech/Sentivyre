@@ -1,0 +1,38 @@
+name: Release Sentivyre
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install NSIS (makes the setup file)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends nsis
+
+      - name: Install packages
+        run: npm ci
+
+      - name: Build setup file and update file
+        run: npm run dist
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Sentivyre ${{ github.ref_name }}
+          generate_release_notes: true
+          files: |
+            dist/Sentivyre-Setup-*.exe
+            dist/latest.yml
